@@ -1,7 +1,7 @@
 # R script to replicate the multi-GAM analyses presented in 
 # Jacobson et al., Quantifying the response of Blainville's beaked whales 
 # to US Naval sonar exercises in Hawaii
-# Last updated 2021-11-03 by EKJ
+# Last updated 2022-01-16 by EKJ
 
 library(dplyr)
 library(tidyr)
@@ -24,11 +24,11 @@ for (i in 1:length(nb)){
 }
 
 # baseline data where no training or mfas was present
-baseline <- filter(PMRF_SCCData, Period=="00") 
+baseline <- filter(PMRF_SCCData, Phase=="0") 
 # training where only training, no mfas was present
-training <- filter(PMRF_SCCData, Period=="02")
+training <- filter(PMRF_SCCData, Phase == "A")
 # sonar when both training and mfas were present
-sonar <- filter(PMRF_SCCData, Period == "12")
+sonar <- filter(PMRF_SCCData, Phase == "B")
 # within sonar dataset, if sonar RL was estimated to be 0 mark as no sonar
 sonar$Sonar[which(sonar$Sonar==1 & sonar$MaxRL == 0)] <- 0
 # filter out times when no sonar was present (e.g., in between exercises)
@@ -177,8 +177,8 @@ for (i in 1:5001){
   }
   
   # refilter the data to make sure no prev offsets are accidentally used
-  training.bs <- training[,1:7]
-  sonar.bs <- sonar[,1:7]
+  training.bs <- training[,1:(ncol(training)-1)]
+  sonar.bs <- sonar[,1:(ncol(sonar)-2)]
   
   # pull a random draw of the coefficients of m1
   nbeta1 <- rmvn(1, coef(m1), vcov(m1))
@@ -242,13 +242,17 @@ load("./Data/bootstrapM1M2M3_2001.RData")
 bs2 <- bootstrap.mat
 load("./Data/bootstrapM1M2M3_3001.RData")
 bs3 <- bootstrap.mat
+
+bootstrap.df <- as.data.frame(rbind(bs1, bs2, bs3))
+rm(bs1, bs2, bs3)
+
 load("./Data/bootstrapM1M2M3_4001.RData")
 bs4 <- bootstrap.mat
 load("./Data/bootstrapM1M2M3_5001.RData")
 bs5 <- bootstrap.mat
 
-bootstrap.df <- as.data.frame(rbind(bs1, bs2, bs3, bs4, bs5))
-rm(bs1, bs2, bs3, bs4, bs5)
+bootstrap.df <- rbind.data.frame(bootstrap.df, as.data.frame(bs4), as.data.frame(bs5))
+rm(bs4, bs5)
 
 # training relative to baseline
 d21 <- bootstrap.df %>%
@@ -293,3 +297,5 @@ p32 <- ggplot(d32) +
   theme_bw()
 
 ggarrange(p31, p32)
+
+
